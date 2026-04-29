@@ -174,10 +174,22 @@ class ClientAPIServer:
                 self.trainer.download_global_weights()
             
             result = self.trainer.train_round(r, on_loss_update=self._on_loss_update)
-            print(f"Client {self.client_id} - Round {r} completed. Avg Loss: {result['avg_loss']:.4f}")
             
-            print(f"Client {self.client_id} - Uploading weights to aggregation server")
-            self.trainer.upload_weights(r)
+            avg_loss = result.get('avg_loss')
+            valid_epochs = result.get('valid_epochs', 0)
+            
+            if avg_loss is not None:
+                print(f"Client {self.client_id} - Round {r} completed. Valid epochs: {valid_epochs}, Avg Loss: {avg_loss:.4f}")
+            else:
+                print(f"Client {self.client_id} - Round {r} completed with no valid epochs.")
+            
+            if valid_epochs > 0:
+                print(f"Client {self.client_id} - Uploading weights to aggregation server")
+                upload_success = self.trainer.upload_weights(r)
+                if not upload_success:
+                    print(f"Client {self.client_id} - Warning: Failed to upload weights for round {r}")
+            else:
+                print(f"Client {self.client_id} - Skipping weight upload (no valid training)")
             
             time.sleep(0.5)
         
